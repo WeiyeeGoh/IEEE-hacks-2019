@@ -2,12 +2,13 @@ from colorfight import Colorfight
 import time
 import websockets
 import random
-from colorfight.constants import BLD_GOLD_MINE, BLD_ENERGY_WELL, BLD_FORTRESS
+from colorfight.constants import BLD_GOLD_MINE, BLD_ENERGY_WELL, BLD_FORTRESS, BLD_HOME
 
 # Create a Colorfight Instance. This will be the object that you interact
 # with.
 game = Colorfight()
 upgrade_home_flag = False
+max_out_pace = False
 
 def check_to_upgrade_home(home_cell):
 	global game
@@ -19,6 +20,8 @@ def check_to_upgrade_home(home_cell):
 	print("flag: %r" %upgrade_home_flag)
 	if home_cell.building.level < 3 and game.me.gold + game.me.gold_source > home_cell.building.level * 1000 and game.me.energy + game.me.energy_source > home_cell.building.level * 1000:
 		upgrade_home_flag = True
+	
+
 
 def upgrade_home(home_cell, cmd_list):
 	global game
@@ -60,7 +63,7 @@ def choose_atk_by_rsc_sum(cmd_list, atk_list):
 		# Get the MapCell object of that position
 			c = game.game_map[pos]
 
-			if c.owner != game.uid and c.position not in atk_list and c.position not in temp_queue and len(me.cells) < 900: 
+			if c.owner != game.uid and c.position not in temp_queue and len(me.cells) < 900: 
 				rsc_sum = c.natural_gold + c.natural_energy
 				c_val = (c.attack_cost / rsc_sum) * 10000 + c.attack_cost
 				item = (c_val, pos, c.attack_cost)
@@ -75,9 +78,17 @@ def choose_atk_by_rsc_sum(cmd_list, atk_list):
 		c = game.game_map[pos]
 		if c.attack_cost < game.me.energy:
 			cmd_list.append(game.attack(pos, c.attack_cost))
-			print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost))
-			game.me.energy -= c.attack_cost
-			atk_list.append(c.position)
+			print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost + 3))
+			game.me.energy = game.me.energy - c.attack_cost - 3
+		elif game.me.energy > 0:
+			adj_enemy = False
+			for adj_c in c.position.get_surrounding_cardinals():
+				c2 = game.game_map[adj_c]
+				if c2.owner != game.uid:
+					adj_enemy = True
+			if adj_enemy:
+				cmd_list.append(game.attack(pos, 1))
+				game.me.energy -= 1
 
 def choose_build_by_max_rsc(cmd_list, home_cell):
 	#chooses gold or energy, whichever one is higher
@@ -185,7 +196,7 @@ def build_home():
 
 # Connect to the server. This will connect to the public room. If you want to
 # join other rooms, you need to change the argument
-game.connect(room = 'test-run1')
+game.connect(room = 'public2')
 
 # game.register should return True if succeed.
 # As no duplicate usernames are allowed, a random integer string is appended
@@ -212,11 +223,15 @@ if game.register(username = 'Greedy' + str(random.randint(1, 100)), \
 
 		home_cell = find_home_cell()
 
-
 		if home_cell == None:
 			home_cell = build_home()
 
 		if home_cell != None:
+
+			if home_cell.building.level == 3:
+				max_out_pace = True
+				game.me.gold_source = game.me.gold_source * .75
+
 			check_to_upgrade_home(home_cell)
 			if upgrade_home_flag: 
 				upgrade_home(home_cell, cmd_list)
