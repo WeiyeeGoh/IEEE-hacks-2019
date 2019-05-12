@@ -73,6 +73,7 @@ def choose_atk_by_rsc_sum(cmd_list, atk_list):
 				print(item)
 
 	rsc_queue.sort(key=lambda tup: tup[0])
+	no_atk_queue = []
 	for cell in rsc_queue:
 		pos = cell[1]
 		c = game.game_map[pos]
@@ -80,14 +81,33 @@ def choose_atk_by_rsc_sum(cmd_list, atk_list):
 			cmd_list.append(game.attack(pos, c.attack_cost))
 			print("We are attacking ({}, {}) with {} energy".format(pos.x, pos.y, c.attack_cost + 3))
 			game.me.energy = game.me.energy - c.attack_cost - 3
-		elif game.me.energy > 0:
+		else:
+			no_atk_queue.append(cell)
+			
+
+	for my_cell in game.me.cells.values():
+		if game.me.energy > 0:
+			adj_enemy = False
+			for adj_c in my_cell.position.get_surrounding_cardinals():
+				c2 = game.game_map[adj_c]
+				if c2.owner != game.uid:
+					adj_enemy = True
+			if adj_enemy:
+				cmd_list.append(game.attack(my_cell.position, 1))
+				game.me.energy -= 1
+
+	for cell in no_atk_queue:
+		pos = cell[1]
+		c = game.game_map[pos]
+
+		if game.me.energy > 0:
 			adj_enemy = False
 			for adj_c in c.position.get_surrounding_cardinals():
 				c2 = game.game_map[adj_c]
 				if c2.owner != game.uid:
 					adj_enemy = True
 			if adj_enemy:
-				cmd_list.append(game.attack(pos, 1))
+				cmd_list.append(game.attack(c.position, 1))
 				game.me.energy -= 1
 
 def choose_build_by_max_rsc(cmd_list, home_cell):
@@ -138,7 +158,6 @@ def choose_build_by_max_rsc(cmd_list, home_cell):
 
 	for cell in merge_queue:
 		b_type = cell[1]
-		print("we want to build a %s" %b_type)
 		pos = cell[2]
 		c = game.game_map[pos]
 
@@ -205,7 +224,7 @@ game.connect(room = 'public2')
 # You need to set a password. For the example AI, the current time is used
 # as the password. You should change it to something that will not change 
 # between runs so you can continue the game if disconnected.
-if game.register(username = 'Greedy' + str(random.randint(1, 100)), \
+if game.register(username = 'please dont crash', \
 		password = str(int(time.time()))):
 	# This is the game loop
 	while True:
