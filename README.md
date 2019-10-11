@@ -1,2 +1,2 @@
 # IEEE-hacks-2019
-coloai
+Python AI program for UCSB IEEE ColorAI competition. 
